@@ -3,13 +3,15 @@ package com.dbtest;
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.Response;
@@ -19,10 +21,13 @@ import com.android.volley.toolbox.StringRequest;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
 
     DatabaseHandler db;
-    
+    private RecyclerView rv;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,10 +39,15 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+
             }
         });
+
+
+        rv = (RecyclerView)findViewById(R.id.cardList);
+        rv.setHasFixedSize(true);
+        LinearLayoutManager llm = new LinearLayoutManager(this);
+        rv.setLayoutManager(llm);
 
         db = new DatabaseHandler(this);
 
@@ -90,12 +100,18 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("TAG", response.toString());
                 Gson gson = new GsonBuilder().serializeNulls().create();
                 ModelWords wordsData = gson.fromJson(response, ModelWords.class);
-                if (wordsData.getWords().length>0){
-                    for (int i = 0; i < wordsData.getWords().length; i++) {
-                        db.addContact(wordsData.getWords()[i]);
+                try {
+                    if (wordsData.getWords().length>0){
+                        for (int i = 0; i < wordsData.getWords().length; i++) {
+                            if (Float.parseFloat(wordsData.getWords()[i].getRatio())>0) {
+                                db.addContact(wordsData.getWords()[i]);
+                            }
+                        }
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                
+
                 //=====set data in lists==
                 setdataInList();
                 
@@ -108,6 +124,11 @@ public class MainActivity extends AppCompatActivity {
             public void onErrorResponse(VolleyError error) {
                 VolleyLog.d("TAG", "Error: " + error.getMessage());
                 pDialog.hide();
+                try {
+                    Toast.makeText(MainActivity.this, "Somethings wrong.", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -117,5 +138,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setdataInList() {
+        List<Words> words = db.getAllContacts();
+        RVAdapter adapter = new RVAdapter(words, this);
+        rv.setAdapter(adapter);
     }
 }
